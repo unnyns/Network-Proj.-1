@@ -4,11 +4,12 @@ import java.net.Socket;
 import java.util.Scanner;
 import java.lang.*;
 
-public class Publisher
+public class Publisher extends Thread
 {
   public static int port;
   public static String ip;
 
+  /*Constructor for the Publisher*/
   public Publisher(String Ip, int Port)
   {
     ip = Ip;
@@ -17,25 +18,27 @@ public class Publisher
 
   public static void main(String[] args) throws IOException
   {
-    String[] splitcommand;
-    String topic;
-    String message;
+    String[] splitcommand; //Array used to split the string command
+    String topic; //The topic that the user wrote
+    String message; //The data that the user wrote
     Scanner sc = new Scanner(System.in);
-    Socket socket = null;
+    Socket socket = null; //Socket which make the connection with the server
     try
     {
-      String scanport = sc.nextLine();
-      port = Integer.parseInt(scanport);
+      System.out.println("Enter the port (Ex: 9999)");
+      String scanport = sc.nextLine();//Try to take the port
+      port = Integer.parseInt(scanport);//Parse the port to have an int
     }
     catch(Exception e)
     {
-      System.out.println("Invalid port");
+      System.out.println("Invalid port"); //If the user doesn't write a number
     }
     while(true)
     {
       System.out.println("Publish [ServerIp] [Topic] [Data] or Exit");
-      String command = sc.nextLine().toLowerCase();
-      splitcommand = command.split(" ");
+      String command = sc.nextLine().toLowerCase(); //Scan the publish command
+      splitcommand = command.split(" "); //Split the command
+      //The command should have 1 or 4 arguments
       if(splitcommand.length != 1 && splitcommand.length != 4)
       {
         System.out.println("Invalid command");
@@ -44,7 +47,7 @@ public class Publisher
       {
         if(splitcommand[0].equals("exit"))
         {
-          break;
+          break; //stop the loop
         }
         else if(splitcommand[0].equals("publish"))
         {
@@ -53,10 +56,11 @@ public class Publisher
           message = splitcommand[3];
           try
           {
-            socket = new Socket(ip, port);
+            socket = new Socket(ip, port); //Try to connect with the server
             if(socket != null)
             {
               System.out.println("Connected");
+              //Open the output stream and send the command
               DataOutputStream output = new DataOutputStream(socket.getOutputStream());
         			output.writeUTF("publish " + topic + " " + message);
             }
@@ -73,11 +77,11 @@ public class Publisher
         }
         else
         {
-          System.out.println("You can just Publish or Exit here.");
+          System.out.println("You can only Publish or Exit here.");
         }
       }
     }
-    if(socket != null)
+    if(socket != null) //If the socket is not null we close it
       socket.close();
   }
 }

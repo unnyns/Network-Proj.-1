@@ -6,31 +6,51 @@ import java.net.NetworkInterface;
 import java.net.SocketException;
 import java.util.Collections;
 
-public class MqttClient
+public class MqttClient extends Thread
 {
+  /*This variable is the id of the client, this id will be the MAC address of
+   *the using device*/
   private String id;
+  /*Input stream with the server*/
   private DataInputStream input;
+  /*Output stream with the server*/
   private DataOutputStream output;
+  /*The socket of the client connected to the server*/
   private Socket socket;
+  /*The topic on where the client want to be*/
+  private String topic;
 
+  /*Constructor of the client, this function will get the MAC address of the
+   *client, save the socket given in parameter, and open streams from this
+   *socket*/
   public MqttClient(Socket Socket)
   {
     id = getMacAddress();
     socket = Socket;
     if(socket != null)
     {
-      input = new DataInputStream(socket.getInputStream());
-			output = new DataOutputStream(socket.getOutputStream());
+      try
+      {
+        input = new DataInputStream(socket.getInputStream());
+  			output = new DataOutputStream(socket.getOutputStream());
+      }
+      catch(IOException e)
+      {
+        System.out.println("stream connection failed");
+      }
+
     }
   }
-
-  public void start()
+  /*Here is the Thread function, we try to get a command, if it's a subscribe
+   *command, a loop begin waiting for any publish in the apropiate topic,
+   *if it's a publish, we will search all clients register in the topic
+   *and send them the data associate with the command*/
+  public void run()
   {
-    String command;
-    String[] splitcommand;
-    String in;
-    String[] splitInput;
-    String topic;
+    String command = "";
+    String[] splitcommand = null;
+    String in = "";
+    String[] splitInput =null;
     try
     {
       command = input.readUTF();
@@ -43,34 +63,43 @@ public class MqttClient
     {
       splitcommand = command.split(" ");
     }
-    if((splitcommand[0] != "publish" && splitcommand[0] != "subscribe") ||
-        (splitcommand.length != 3 && splitcommand.length != 4))
+    if((!splitcommand[0].equals("publish") && !splitcommand[0].equals("subscribe")) ||
+      (splitcommand.length != 2 && splitcommand.length != 3))
     {
       System.out.println("(MqttClient) Invalid command");
+      System.out.println(command);
+      System.out.println(splitcommand[0]);
     }
-    else if(splitcommand[0] == "subscribe")
+    if(splitcommand[0].equals("subscribe"))
     {
-      topic = splitcommand[2];
-      while(socket.isConnected())
-      {
-        try
-        {
-          in = input.readUTF();
-          splitInput = in.split(" ");
-          if(splitInput[0] == "publish" && splitInput.lenght == 4)
-          {
-            if(splitInput[2] == topic)
-              System.out.println("Client: " + id + "Receive: " + splitInput[3]);
-          }
-        }
-        catch(Exception e)
-        {
-          
-        }
-      }
+      topic = splitcommand[1];
+      while(socket.isConnected());
     }
+    else if(splitcommand[0].equals("publish"))
+    {
+  		ArrayList<MqttClient> clientList = MqttBroker.getClients();
+  		System.out.println("Sending message: "+ splitcommand[2]);
+  		for (int i = 0; i < clientList.size(); i++)
+  			if(clientList.get(i).topic != null && clientList.get(i).topic.equals(splitcommand[1]))
+  			{
+          try
+          {
+
+            System.out.println("Send to the subscriber " + id +": " + splitcommand[2]);
+            clientList.get(i).output.writeUTF(splitcommand[2]);
+          }
+          catch(IOException e){}
+  			}
+    }
+    try
+		{
+			input.close();
+			output.close();
+		}
+		catch (IOException e){}
   }
 
+  /*This function return the MAC address of the client running the program*/
   public static String getMacAddress()
   {
       String result = "";
