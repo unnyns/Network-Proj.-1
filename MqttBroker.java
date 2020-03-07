@@ -17,7 +17,7 @@ public class MqttBroker extends Thread {
      *with the recieved socket, add it to the list of clients and start the Thread
      */
     static public void main(String[] args) throws IOException {
-        port = (int) (Math.random() * ((49152 -  6553) + 1) + 6553 );
+        port = (int) (Math.random() * ((65535 - 49152) + 1) + 49152);
         server = new ServerSocket(port);
         System.out.println(InetAddress.getLocalHost());
         System.out.println("Port: " + port);
