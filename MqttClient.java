@@ -1,5 +1,6 @@
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketException;
 import java.util.ArrayList;
 
 public class MqttClient extends Thread {
@@ -15,6 +16,7 @@ public class MqttClient extends Thread {
     /*The topic on where the client want to be*/
     private String topic;
 
+    private String clientType;
 
     /*Constructor of the client, this function will get the MAC address of the
      *client, save the socket given in parameter, and open streams from this
@@ -27,7 +29,7 @@ public class MqttClient extends Thread {
                 input = new DataInputStream(socket.getInputStream());
                 output = new DataOutputStream(socket.getOutputStream());
             } catch (IOException e) {
-                System.out.println("stream connection failed");
+                System.out.println("Stream connection failed");
             }
 
         }
@@ -40,8 +42,6 @@ public class MqttClient extends Thread {
     public void run() {
         String command = "";
         String[] splitcommand = null;
-        String in = "";
-        String[] splitInput = null;
         try {
             command = input.readUTF();
         } catch (IOException e) {
@@ -57,26 +57,40 @@ public class MqttClient extends Thread {
             System.out.println(splitcommand[0]);
         }
         if (splitcommand[0].equals("subscribe")) {
+            clientType = "Subscriber";
             topic = splitcommand[1];
-            System.out.println("Connected with subscriber :" + socket.getRemoteSocketAddress());
-            while (socket.isConnected());
-
-        } else if (splitcommand[0].equals("publish")) {
+            System.out.println("Connected with Subscriber : " + socket.getRemoteSocketAddress());
+            while (socket.isConnected()){
+                try {
+                    String e = input.readUTF();
+                    if(e.equals("exit")){
+                        break;
+                    }
+                } catch (IOException s) {
+                    break;
+                }
+            }
+            } else if (splitcommand[0].equals("publish")) {
+            clientType = "Publisher";
             ArrayList<MqttClient> clientList = MqttBroker.getAllClients();
-            System.out.println("Get message: " + splitcommand[2] + " from publisher :" + socket.getRemoteSocketAddress());
+            System.out.println("Get message: " + splitcommand[2] + " from Publisher : " + socket.getRemoteSocketAddress());
             for (MqttClient client : clientList) {
                 if (client.topic != null && client.topic.equals(splitcommand[1])) {
                     try {
                         System.out.println("Send to the subscriber " + client.id + ": " + splitcommand[2]);
                         client.output.writeUTF("Message: " + splitcommand[2] + "  from publisher: " + socket.getRemoteSocketAddress());
                     } catch (IOException e) {
+                        System.out.println("Can't send message to subscriber : " + e.getMessage());
                     }
                 }
             }
         }
         try {
+            System.out.println("Close connection with "+ clientType  + " : " + socket.getRemoteSocketAddress());
+            MqttBroker.removeClient(this);
             input.close();
             output.close();
+            socket.close();
         } catch (IOException e) {
         }
     }

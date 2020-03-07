@@ -5,14 +5,9 @@ import java.util.Scanner;
 import java.lang.*;
 
 public class Publisher extends Thread {
-    public static int port;
-    public static String ip;
-
-    /*Constructor for the Publisher*/
-    public Publisher(String Ip, int Port) {
-        ip = Ip;
-        port = Port;
-    }
+    private static int port;
+    private static String ip;
+    private static Socket socket = null;
 
     public static void main(String[] args) throws IOException {
         String[] splitCommand; //Array used to split the string command
@@ -51,7 +46,8 @@ public class Publisher extends Thread {
                         DataOutputStream output = new DataOutputStream(socket.getOutputStream());
                         output.writeUTF("publish " + topic + " " + message);
                         System.out.println("Successfully send message to broker");
-
+                        output.close();
+                        socket.close();
                     } catch (Exception e) {
                         System.out.println("Can't connect to broker " + e.getMessage());
                     }
@@ -60,7 +56,5 @@ public class Publisher extends Thread {
                 }
             }
         }
-        if (socket != null) //If the socket is not null we close it
-            socket.close();
     }
 }
